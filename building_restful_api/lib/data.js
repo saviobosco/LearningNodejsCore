@@ -4,6 +4,7 @@
 
  var fs = require('fs');
  var path = require('path');
+ var helpers = require('./helpers');
 
 // Container for the module to be exported
 var lib = {};
@@ -39,9 +40,18 @@ lib.create = function(dir, file, data, callback) {
     })
 }
 
+// Users 
+// Required data : phone
+//Optional data : none
+// Only authenticated users can access their object.
 lib.read = function(dir, file, callback) {
     fs.readFile(lib.baseDir+dir+'/'+file+'.json', 'utf-8', function(err, data) {
-        callback(err, data);
+        if (!err && data) {
+            var parsedData = helpers.parseJSONToObject(data);
+            callback(false, parsedData)
+        } else {
+            callback(err, data);
+        }
     });
 }
 

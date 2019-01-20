@@ -12,6 +12,8 @@ var fs = require('fs');
 
 var config = require('./config');
 var data = require('./lib/data');
+var handlers = require('./lib/handlers');
+var helpers = require('./lib/helpers');
 
 // Intantiates the HTTP server
 
@@ -54,7 +56,7 @@ var unifiedServer = function(req, res) {
     // Get the query string as an object 
     var queryStringObject = parsedUrl.query;
     //Get the HTTP Method
-    var method = req.method.toUpperCase();
+    var method = req.method.toLowerCase();
 
     //Get reques headers
     var headers = req.headers;
@@ -76,7 +78,7 @@ var unifiedServer = function(req, res) {
             'queryStringObject' : queryStringObject,
             'method' : method,
             'headers' : headers,
-            'payload' : buffer
+            'payload' : helpers.parseJSONToObject(buffer)
         };
 
         // Route the request to the specified handler
@@ -99,26 +101,17 @@ var unifiedServer = function(req, res) {
 
             console.log('Returning this response: ', statusCode, payloadString);
 
-        })
+        });
 
     });
 }
 
 
 
-//Define handlers = {}
-var handlers = {}
-
-handlers.ping = function(data, callback) {
-    callback(200);
-};
-
-handlers.notFound = function(data, callback) {
-    callback(404);
-};
 
 // Define a router 
 var router = {
     'sample' : handlers.sample,
-    'ping' : handlers.ping
+    'ping' : handlers.ping,
+    'users' : handlers.users
 }
