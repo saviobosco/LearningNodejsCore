@@ -193,13 +193,38 @@ handlers._users.delete = function(data, callback) {
                     if (!err && data) {
                         _data.delete("users", phone, function(err) {
                             if (!err) {
-                                callback(200);
+                                // delete checks associated to that user
+                                var userChecks = typeof(data.checks) == "object" && userData.checks instanceof Array ?
+                                userData.checks : [] ;
+                                var checksToDelete = userChecks.length;
+                                if (checksToDelete > 0) {
+                                    var checksDeleted = 0;
+                                    var deletionErrors = false;
+                                    // loop through the checks 
+                                    userChecks.forEach(function(checkId){
+                                        _data.delete("checks", checkId, function(err) {
+                                            if(err) {
+                                                deletionErrors = true
+                                            }
+                                            checksDeleted++;
+                                            if (checksDeleted == checksToDelete) {
+                                                if(!deletionErrors) {
+                                                    callback(200);
+                                                } else {
+                                                    callback(500, {"Error" : "Errors encountered while attempting to delete all of the user's check. All check may not have been completely delete"});
+                                                }
+                                            }
+                                        });
+                                    })
+                                } else {
+                                    callback(200);
+                                }
                             } else {
                                 callback(400, {"Error" : "could not delete the user."});
                             }
                         });
                     } else {
-                        callback(400, {"Error" : "Specified user does not!."})
+                        callback(400, {"Error" : "Specified user does not exist!."})
                     }
                 });
             } else {
@@ -396,7 +421,6 @@ handlers._checks.post = function(data, callback) {
     data.payload.successCodes : false ;
     var timeoutSeconds = typeof(data.payload.timeoutSeconds) == "number" && data.payload.timeoutSeconds % 1 === 0 && data.payload.timeoutSeconds >= 1 && data.payload.timeoutSeconds <= 5 ?
     data.payload.timeoutSeconds : false ;
-    console.log(protocol, url, method, successCodes, timeoutSeconds);
     
     if (protocol && url && method && successCodes && timeoutSeconds) {
         var token = typeof(data.headers.token) == "string" ? data.headers.token : false;
@@ -453,6 +477,158 @@ handlers._checks.post = function(data, callback) {
         });
     } else {
         callback(400, {"Error" : "Missing required input(s)."});
+    }
+}
+
+// Checks - get
+// Required data - id
+// Optional data : none
+handlers._checks.get = function(data, callback) {
+//Check that the phone is valid
+    var id = typeof(data.queryStringObject.id) == "string" && data.queryStringObject.id.length == 20 ?
+    data.queryStringObject.id : false;
+    if (id) {
+        // look up the check 
+        _data.read("checks", id, function(err, checkData){
+            if (!err && checkData) {
+                //Get the token from the header
+                var token = typeof(data.headers.token) == "string" ? data.headers.token : false;
+                // verify that the given token is valid and belongs to the user who created the check
+                handlers._tokens.verifyToken(token, checkData.userPhone, function(tokenIsValid) {
+                    // if token is valid, return the check data
+                    if (tokenIsValid) {
+                        callback(200, checkData);
+                    } else {
+                        callback(403, {"Error" : "Missing required token in header or token is invalid."})
+                    }
+                });
+            } else {
+                callback(400);
+            }
+        });
+
+    } else {
+        callback(400, {"Error" : "Missing required field"});
+    }
+}
+
+// Checks : put
+// Required data : id
+// Optional data : protocol, url, method, successCodes, timeoutSeconds
+handlers._checks.put = function(data, callback) {
+    var id = typeof(data.payload.id) == "string" && data.payload.id.trim().length == 20 ?
+    data.payload.id : false ;
+
+    var protocol = typeof(data.payload.protocol) == "string" && ['https', 'http'].indexOf(data.payload.protocol.toLowerCase()) > -1 ?
+    data.payload.protocol : false ;
+    var url = typeof(data.payload.url) == "string" && data.payload.url.trim().length >= 0 ?
+    data.payload.url : false ;
+    var method = typeof(data.payload.method) == "string" && ['post', 'put', 'get', 'delete'].indexOf(data.payload.method.toLowerCase()) > -1 ?
+    data.payload.method : false ;
+    var successCodes = typeof(data.payload.successCodes) == "object" && data.payload.successCodes instanceof Array && data.payload.successCodes.length >= 0 ?
+    data.payload.successCodes : false ;
+    var timeoutSeconds = typeof(data.payload.timeoutSeconds) == "number" && data.payload.timeoutSeconds % 1 === 0 && data.payload.timeoutSeconds >= 1 && data.payload.timeoutSeconds <= 5 ?
+    data.payload.timeoutSeconds : false ;
+
+    if (id) {
+        if (protocol || url || method || successCodes || timeoutSeconds) {
+            _data.read("checks", id, function(err, checkData) {
+                if (!err && checkData) {
+                    //Get the token from the header
+                    var token = typeof(data.headers.token) == "string" ? data.headers.token : false;
+                    handlers._tokens.verifyToken(token, checkData.userPhone, function(tokenIsValid) {
+                        // if token is valid, return the check data
+                        if (tokenIsValid) {
+                            // update the check where necessary
+                            if (protocol) {
+                                checkData.protocol = protocol;
+                            }
+                            if (url) {
+                                checkData.url = url;
+                            }
+                            if (method) {
+                                checkData.method = method;
+                            }
+                            if (method) {
+                                checkData.successCodes = successCodes;
+                            }
+                            if (timeoutSeconds) {
+                                checkData.timeoutSeconds = timeoutSeconds;
+                            }
+                            // store the updates 
+                            _data.update("checks", id, checkData, function(err){
+                                if (!err) {
+                                    callback(200, checkData);
+                                } else {
+                                    callback(500, {"Error" : "Could not update the check"});
+                                }
+                            })
+                        } else {
+                            callback(403, {"Error" : "Missing required token in header or token is invalid."})
+                        }
+                    });
+                } else {
+                    callback(400, {"Error" : "Check id does not exist."});
+                }
+            })
+        } else {
+            callback(400, {"Error" : "Missing fields to update."})
+        }
+    } else {
+        callback(400, {"Error" : "Missing required fields."})
+    }
+
+    
+}
+//Checks : delete
+// Required data : id
+//Optional data : none
+handlers._checks.delete = function(data, callback) {
+    var id = typeof(data.payload.id) == "string" && data.payload.id.trim().length == 20 ?
+    data.payload.id : false ;
+    if (id) {
+        _data.read("checks", id, function(err, checkData) {
+            if (!err && checkData) {
+
+                //Get the token from the header
+                var token = typeof(data.headers.token) == "string" ? data.headers.token : false;
+                handlers._tokens.verifyToken(token, checkData.userPhone, function(tokenIsValid) {
+                    if (tokenIsValid) {
+                        _data.delete("checks", id, function(err) {
+                            if(!err) {
+                                // detach from the user 
+                                _data.read("users", checkData.userPhone, function(err, userData) {
+                                    if (!err && userData) {
+                                        userData.checks = userData.checks.filter(function(check, index, checks) {
+                                            return check !== id;
+                                        });
+                                        _data.update("users", checkData.userPhone, userData, function(err) {
+                                            if (!err) {
+                                                callback(200);
+                                            } else {
+                                                callback(500, {"Error" : "Could not update user data."});
+                                            }
+                                        })
+                                    } else {
+                                        callback(500);
+                                    }
+                                })
+                            } else {
+                                callback(500, {"Error" : "Could not delecte check."})
+                            }
+                        })
+                    } else {
+                        callback(403, {"Error" : "Missing required token in header or token is invalid."})
+                    }
+                });
+
+            } else {
+                callback(400, {"Error" : "Check id does not exist"})
+            }
+        })
+
+    } else {
+        callback(400, {"Error" : "Required fields missing."})
     }
 }
 
