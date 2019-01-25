@@ -15,6 +15,12 @@ var data = require('./lib/data');
 var handlers = require('./lib/handlers');
 var helpers = require('./lib/helpers');
 
+//@TODO Get rid of this later
+helpers.sendTwilioSMS("4158375309", "Hello world", function(err) {
+    console.log("This was the error", err);
+});
+
+
 // Intantiates the HTTP server
 
 var httpServer = http.createServer(function(req, res){
@@ -60,6 +66,10 @@ var unifiedServer = function(req, res) {
 
     //Get reques headers
     var headers = req.headers;
+
+    // modify the header token 
+    headers.token = (typeof(headers.authorization) === "string") ? headers.authorization.split(" ")[1] : false;
+    headers.token =  typeof(headers.token) === "string" ? headers.token : false;
 
     //Get the payload
     var decoder = new stringDecoder('utf-8');
