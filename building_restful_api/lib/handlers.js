@@ -23,7 +23,7 @@ handlers.users = function(data, callback) {
     } else {
         callback(405);
     }
-}
+};
 
 // Container for users object
 handlers._users = {};
