@@ -45,6 +45,63 @@ handlers.index = function(data, callback) {
     }
 }
 
+handlers.favicon = function(data, callback) {
+    if (data.method === "get") {
+        //Read in the favicon data
+        helpers.getStaticAsset('favicon.ico', function(err, data) {
+            if (!err && data) {
+                //Callback the data
+                callback(200, data, 'favicon')
+            } else {
+                callback(500);
+            }
+        });
+    } else {
+        callback(405);
+    }
+}
+
+handlers.public = function(data, callback) {
+    if (data.method === "get") {
+        // Get the file name being requested 
+        var trimmedAssetName = data.trimmedPath.replace('public/', '');
+        if (trimmedAssetName.length > 0) {
+            helpers.getStaticAsset(trimmedAssetName, function(err, data) {
+                if (!err && data) {
+                    // Determine the content type (default to plain type)
+                    var contentType = "plain";
+                    if(trimmedAssetName.indexOf(".css") > -1) {
+                        contentType = "css"
+                    }
+                    if(trimmedAssetName.indexOf(".png") > -1) {
+                        contentType = ".png"
+                    }
+                    if(trimmedAssetName.indexOf(".jpg") > -1) {
+                        contentType = ".jpg"
+                    }
+                    if(trimmedAssetName.indexOf(".ico") > -1) {
+                        contentType = "favicon"
+                    }
+                    callback(200, data, contentType);
+                } else {
+                    callback(404);
+                }
+            })
+        } else {
+            callback(404);
+        }
+        
+    } else {
+        callback(405);
+    }
+}
+
+
+
+
+
+
+
 /**
  * JSON API Handlers
  */

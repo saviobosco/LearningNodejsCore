@@ -175,4 +175,21 @@ helpers.interpolate = function(str, data) {
     return str;
 }
 
+// Get the contents of a static(public) asset
+helpers.getStaticAsset = function(fileName, callback) {
+    fileName = typeof(fileName) == "string" && fileName.length > 0 ? fileName : false;
+    if (fileName) {
+        var publicDir = path.join(__dirname, '/../public/');
+        fs.readFile(publicDir + fileName, function(err, data) {
+            if (!err && data) {
+                callback(false, data);
+            } else {
+                callback("Not file could be found");
+            }
+        })
+    } else {
+        callback("a valid file name was not specified");
+    }
+}
+
  module.exports = helpers;

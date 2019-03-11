@@ -74,6 +74,9 @@ server.unifiedServer = function(req, res) {
         // Choose the request handler, if not found us not found handler
         var chosenHandler = typeof(server.router[trimmedPath]) !== 'undefined' ? server.router[trimmedPath] : handlers.notFound;
 
+        // if the request is within the public directory, use the public handler instead
+        chosenHandler = trimmedPath.indexOf("public/") > -1 ? handlers.public : chosenHandler;
+
         var data = {
             'trimmedPath' : trimmedPath,
             'queryStringObject' : queryStringObject,
@@ -100,8 +103,28 @@ server.unifiedServer = function(req, res) {
 
             if (contentType === 'html') {
                 res.setHeader('Content-Type', 'text/html')
-                payload = typeof(payload) === 'string' ? payload : '';
-                payloadString = payload;
+                payloadString = typeof(payload) === 'string' ? payload : '';
+            }
+
+            if (contentType === 'favicon') {
+                res.setHeader('Content-Type', 'image/x-icon')
+                payloadString = typeof(payload) !== undefined ? payload : '';
+            }
+            if (contentType === 'css') {
+                res.setHeader('Content-Type', 'text/css')
+                payloadString = typeof(payload) !== undefined ? payload : '';
+            }
+            if (contentType === 'png') {
+                res.setHeader('Content-Type', 'image/png')
+                payloadString = typeof(payload) !== undefined ? payload : '';
+            }
+            if (contentType === 'jpg') {
+                res.setHeader('Content-Type', 'image/jpeg')
+                payloadString = typeof(payload) !== undefined ? payload : '';
+            }
+            if (contentType === 'plain') {
+                res.setHeader('Content-Type', 'text/plain')
+                payloadString = typeof(payload) !== undefined ? payload : '';
             }
 
             // Return the response parts that are coomon to all content-types
@@ -139,7 +162,9 @@ server.router = {
     'ping' : handlers.ping,
     'api/users' : handlers.users,
     'api/tokens' : handlers.tokens,
-    'api/checks' : handlers.checks
+    'api/checks' : handlers.checks,
+    'favicon.ico' : handlers.favicon,
+    'public' : handlers.public
 };
 
 
