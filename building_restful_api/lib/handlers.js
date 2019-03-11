@@ -16,6 +16,41 @@ handlers.notFound = function(data, callback) {
     callback(404);
 };
 
+//Index handler
+handlers.index = function(data, callback) {
+    if (data.method === "get") {
+        // prepare data for page interpolations
+        var templateData = {
+            "head.title" : "This is the title",
+            "head.description" : "This is the meta description",
+            "body.title" : "Hello templated world",
+            "body.class" : "index" 
+        }
+
+        helpers.getTemplate('index', templateData, function(err, str) {
+            if (!err && str) {
+                helpers.addUniversalTemplates(str, templateData, function(err, str) {
+                    if (!err && str) {
+                        callback(200, str, "html");
+                    } else {
+                        callback(500, undefined, "html");
+                    }
+                });
+            } else {
+                callback(500, undefined, 'html');
+            }
+        });
+    } else {
+        callback(405, undefined, 'html');
+    }
+}
+
+/**
+ * JSON API Handlers
+ */
+
+
+
 handlers.users = function(data, callback) {
     var acceptableMethods = ['post', 'put', 'get', 'delete'];
     if (acceptableMethods.indexOf(data.method) > -1) {
